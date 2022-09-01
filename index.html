@@ -1,0 +1,402 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plane shooter</title>
+    <style>
+        
+        body{
+            background-color: black;
+        }
+        #space{
+            background-color: rgb(14, 13, 13);
+            background: url(img/sky.jpg) 100% 100%;
+            position: relative;
+            width: 800px;
+            height: 550px;
+            margin:auto;
+            cursor: none;
+            user-select: none;
+        }
+
+    
+         .plane{
+            position: absolute;
+            margin: auto;
+            transform: rotate(0deg);
+         }
+
+         .plane2{
+            transform: rotate(180deg);
+         }
+
+         .missile{
+            position: absolute;
+            margin: auto;
+         }
+
+         .missile1{
+            width:5px;
+            height:5px;
+            background-color: red;
+            border-radius: 50%;
+         }
+
+         .missile2{
+            width:20px;
+            height:20px;
+         }
+
+         .infos{
+            margin-top: 10px;
+            color: white;
+            text-align: center;
+            font-size: 20px;
+         }
+
+         .infos div{
+             display: inline-block;
+             width:24%;
+         }
+
+         #messages{
+            position: absolute;
+            background-color: #ff000036;
+            padding-top: 60px;
+            color: white;
+            text-align: center;
+            font-size: 40px;
+            width: 100%;
+            height: 490px;
+            top: 0;
+         }
+
+         
+         
+    </style>
+</head>
+<body>
+     
+    <div id="space" class="selectDisable">
+        <div class="infos">
+            <div >
+                Score: <span id="score"></span>
+            </div>
+            <div>
+                Health: <span id="health"></span> 
+            </div>
+            <div >
+                Level: <span id="level"></span> 
+            </div>
+            <div >
+                Bullets:  <span id="bullets"></span>
+            </div>
+        </div>
+        <img src="img/plane1.png" id="plane1" me class="plane plane1" style="top:700px;left:300px" alt="">
+        <div id="messages"></div>
+    </div>
+     
+    <script>   
+
+        var space           = document.querySelector("#space");
+        var plane           = document.querySelector("#plane1");
+        var infosLevel      = document.querySelector("#level");
+        var infosbullets    = document.querySelector("#bullets");
+        var infosHealth     = document.querySelector("#health");
+        var infosScore      = document.querySelector("#score");
+        var messages        = document.querySelector("#messages");
+        
+        var shutsound1      = new Audio("sounds/shut1.wav");
+        var shutsound2      = new Audio("sounds/shut2.wav");
+        var explosionsound  = new Audio("sounds/explosion.mp3");
+        var music1          = new Audio("sounds/music1.mp3");
+         
+
+        plane.style.top      = "430px";
+        plane.style.width    = "100px";
+        plane.style.left     = "350px";
+        plane.style.height   = "100px";
+
+        var title       = "Plane Shooter 1.0";
+        var stop        = true;
+        var level       = 1;
+        var maxlevel    = 5;
+        var score       = 0;
+        var scorestep   = 10;
+        var maxscore    = 100;
+        var bullets     = 50;
+        var duration    = 50;
+        var health      = 100;
+        
+        var missiles   = [];
+        var planes     = [];
+
+        var Missile = function(top,left,direction){
+            if(parseInt(infosbullets.innerHTML)==0)
+                return;
+            var missile = document.createElement("img");
+            missile.setAttribute("src","img/missile2.png");
+            missile.setAttribute("class","missile missile2");
+            missile.setAttribute("direction",direction);
+            missile.setAttribute("style","top:"+top+";left:"+left+"px;width:20px;height:20px");
+            space.appendChild(missile);
+            missile.style.left = left;
+            missile.style.top = top;
+            playSound(shutsound1);
+            if(direction=="down")
+                missile.style.transform = "rotate(180deg)";
+            else{
+                bullets--;
+                infosbullets.innerHTML = bullets;
+            }
+        }
+        
+
+        var playing = setInterval(function(){
+
+            if(stop)
+                return;
+
+            if(bullets==0){
+                lost();
+                return;
+            }
+
+            if(score%maxscore==0 && level==maxlevel){
+                win();
+                return;
+            }
+
+            if(score !=0 && score%maxscore==0 && level<maxlevel){
+                level++;
+                score+=scorestep;
+                infosLevel.innerHTML = level+"/"+maxlevel;
+                infosScore.innerHTML = score;
+                messages.style.display="block";
+                messages.innerHTML = "<h1>"+title+"</h1>Level "+level;
+                stop = true;
+                clear();
+                setTimeout(function(){
+                    messages.style.display="none";
+                    messages.innerHTML = "";
+                    stop = false;
+                },3000);
+                
+            }
+                
+            if(!document.querySelector(".plane2")){
+                for(var i=0;i<level;i++){
+                    addPlane();
+                }
+            }
+                
+            missiles = document.querySelectorAll(".missile");
+            planes   = document.querySelectorAll(".plane");
+
+            for(var i=0;i<missiles.length;i++){
+                var top = parseInt(missiles[i].style.top);
+                var elem = missiles[i];
+                if(top<0 || top>800){
+                    elem.parentNode.removeChild(elem);
+                }else{
+                    if(elem.getAttribute("direction")=="up")
+                        elem.style.top = (top-15) +"px";
+                    else
+                        elem.style.top = (top+15) +"px";
+                }
+
+                for(var j=0;j<planes.length;j++){
+                    var planei = planes[j];
+                    if(intersect(elem,planei)){
+                        playSound(explosionsound);
+                        elem.parentNode.removeChild(elem);
+                        
+                        if(plane === planei){
+                            health-=10;
+                            infosHealth.innerHTML = health+"%";
+                            if(health>=50){
+                                infosHealth.style.color = "white";
+                            }else{
+                                infosHealth.style.color = "red";
+                            }
+                            if(health==0){
+                                lost();
+                                planei.setAttribute("src","img/explosion.gif");
+                            }
+                        }else{
+                            score += scorestep;
+                            infosScore.innerHTML = score;
+                            planei.setAttribute("src","img/explosion.gif");
+                            setTimeout(function(){
+                                planei.parentNode.removeChild(planei);
+                            },1000);
+                        }
+                    }
+                }
+            }
+        },duration);
+
+        function clear(){
+            for(var i=0;i<planes.length;i++){
+                if(planes[i]!=plane1)
+                    planes[i].parentNode.removeChild(planes[i]);
+            }
+        }
+
+        function addPlane(){
+            var plane2           = document.createElement("img");
+            plane2.setAttribute("src","img/plane2.png");
+            plane2.setAttribute("class","plane plane2 selectDisable");
+            space.appendChild(plane2);
+            plane2.style.left    = (Math.random()*700)+"px";
+            plane2.style.width   = "100px";
+            plane2.style.height  = "100px";
+            plane2.style.top     = "10px";
+            var left = plane2.style.left;
+            setInterval(function(){
+                if(stop)
+                    return;
+
+                if(parseInt(plane.style.left) == parseInt(plane2.style.left)){
+                    setTimeout(function(){
+                        var top = (parseInt(plane2.style.top)+100)+"px";
+                        var left = (parseInt(plane2.style.left)+50)+"px";
+                        new Missile(top,left,"down"); 
+                    },500);
+                }
+
+                if(parseInt(plane.style.left)>parseInt(plane2.style.left)){
+                    plane2.style.left = (parseInt(plane2.style.left)+5)+"px";
+                }else{
+                    plane2.style.left = (parseInt(plane2.style.left)-5)+"px";
+                }
+
+            },100);
+            return plane2;
+        }
+
+        
+
+        function intersect(elem1,elem2){
+            var x1          = parseInt(elem1.style.top)+parseInt(elem1.style.height)/2;
+            var x2          = parseInt(elem2.style.top)+parseInt(elem2.style.height)/2;
+            var y1          = parseInt(elem1.style.left)+parseInt(elem1.style.width)/2;
+            var y2          = parseInt(elem2.style.left)+parseInt(elem2.style.width)/2;
+            var dist1       = Math.abs(x1-x2);
+            var dist2       = Math.abs(y1-y2);
+            var maxdist     = 50;
+
+            if((dist1>=0 && dist1<=maxdist) && (dist2>=0 && dist2<=maxdist))
+                return true;
+            else
+                return false;
+        }
+
+        function start(){
+            stop = false;
+            messages.style.display = "none";
+            stopSound(music1);
+        }
+
+        function pause(){
+            stop = true;
+            messages.style.display = "block";
+            messages.innerHTML="<h1>"+title+"</h1> Press Space key to start";
+        }
+
+        
+
+        function reset(){
+            level       = 1;
+            maxlevel    = 5;
+            score       = 0;
+            scorestep   = 10;
+            bullets     = 50;
+            duration    = 50;
+            health      = 100;
+            infosbullets.innerHTML = bullets;
+            infosHealth.innerHTML = health+"%";
+            infosScore.innerHTML = score;
+            infosLevel.innerHTML = level+"/"+maxlevel;
+            plane1.setAttribute("src","img/plane1.png");
+            infosHealth.style.color = "white";
+            clear();
+        }
+
+        function win(){
+            pause();
+            messages.innerHTML="<h1>"+title+"</h1> Congratulations ! You win, your score is "+infosScore.innerHTML;
+            reset();
+            playSound(music1);
+        }
+
+        function lost(){
+            pause();
+            messages.innerHTML="<h1>"+title+"</h1> Sorry ! You lost, your score is "+infosScore.innerHTML;
+            reset();
+            playSound(music1);
+        }
+
+        //   sound control
+
+        function playSound(sound){
+            if(!sound.paused){
+                sound.pause();
+                sound.currentTime = 0;
+            }
+            sound.play();
+        }
+
+        function stopSound(sound){
+            if(!sound.paused){
+                sound.pause();
+                sound.currentTime = 0;
+            }
+        }
+        
+        // events
+
+        space.addEventListener("mousemove",function(e){
+            if(stop)
+                return;
+            var left = parseInt(plane.style.left);
+            plane.style.left = (e.clientX-space.getBoundingClientRect().x)+"px";
+        });
+
+        space.addEventListener("mousedown",function(e){
+            if(stop)
+                return;
+            if(e.button==0){
+                var top = (parseInt(plane.style.top))+"px";
+                var left = (parseInt(plane.style.left)+50)+"px";
+                new Missile(top,left,"up"); 
+            }
+        });
+
+        space.addEventListener("contextmenu",function(e){
+            e.preventDefault();
+        });
+        
+        document.addEventListener("keydown",function(e){
+            console.log(e.keyCode+" key pressed.");
+            if(e.keyCode == 32){
+                if(stop){
+                    start()
+                }else{
+                    pause()
+                }
+            }
+             
+        });
+         
+    reset();
+    pause();
+       
+    
+    </script>
+</body>
+</html>
+
